@@ -113,12 +113,14 @@ For each: run on **Reckless**, then **REPLAY AGAINST GUARDED AGENT**.
 
 ## 90-second demo instructions
 
-1. Open the app — show **AGENT BREAKOUT** headline + two modes (5s).
-2. Select Level 1, hit **Submit Attack** on Reckless → breach + flag (20s).
-3. Click **REPLAY AGAINST GUARDED AGENT** → pipeline shows BLOCK (25s).
-4. Point at Security Events / audit timeline updating (15s).
-5. Jump to Level 3 or 4 — show exfil approval gate or tool poisoning (20s).
-6. Close on lesson: least privilege + control plane stops the same attack (5s).
+Use the full script in **[DEMO.md](./DEMO.md)**. Short version:
+
+1. Open `/?demo=1` — show **AGENT BREAKOUT** + two modes (5s).
+2. Level 1 + **Submit Attack** on Reckless → breach + flag (20s).
+3. **REPLAY AGAINST GUARDED AGENT** → pipeline shows BLOCK (25s).
+4. Point at Security Events / audit timeline (15s).
+5. Level 3 or 4 — exfil approval gate or tool poisoning (20s).
+6. Close: least privilege + control plane stops the same attack (5s).
 
 ## Scripts
 
