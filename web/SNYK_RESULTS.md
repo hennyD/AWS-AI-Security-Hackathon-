@@ -1,13 +1,15 @@
 # Snyk Results — Agent Breakout
 
 **Date:** 2026-09-29  
+**Last verified (UTC):** 2026-09-29T19:12:21Z  
 **Branch:** `cursor/agent-breakout-harden-c621`  
+**CLI:** `snyk@1.1307.4`  
 **Scopes attempted:** `/workspace/web` (primary Next.js app), `/workspace` (root Guild agent package)  
 **Honesty note:** Results below are from real CLI runs on this date with `SNYK_TOKEN` (value never recorded here; redacted as `snyk_uat.***`). No vulnerability findings are fabricated.
 
 ## Authentication status
 
-**SUCCESS — CLI authenticated via `SNYK_TOKEN`.** Token was loaded from gitignored env files only (`/workspace/.env`, `/workspace/web/.env.local`). Identity: `hennyD`. Org id from SCA JSON: `ce0d9e95-d4b8-41a4-9316-9790b9102889`.
+**SUCCESS — CLI authenticated via `SNYK_TOKEN`.** Token was loaded from gitignored env files only (`/workspace/.env`, `/workspace/web/.env.local`) via `set -a; source` (never echoed). Identity: `hennyD`. Org id from SCA JSON: `ce0d9e95-d4b8-41a4-9316-9790b9102889`.
 
 | Channel | Result |
 | --- | --- |
@@ -15,8 +17,8 @@
 | `cd web && npx snyk test --dev` | **Issues found** — see SCA (devDependencies) below |
 | `cd web && npx snyk code test` | **BLOCKED** — `SNYK-CODE-0005` / 403 — Snyk Code not enabled for org |
 | `cd /workspace && npx snyk test` | **OK** — 3 deps, **0** vulnerable paths |
-| `npx snyk secrets test` | **BLOCKED** — `SNYK-CLI-0016` / 403 — Snyk Secrets not enabled for org |
-| Snyk MCP `snyk_sca_scan` / `snyk_code_scan` | **Not authenticated** — MCP session separate from CLI token (`User not authenticated. Please run 'snyk_auth' first`) |
+| `npx snyk secrets test` | **BLOCKED** — `SNYK-CLI-0016` / 403 — Snyk Secrets not enabled for org (prior run) |
+| Snyk MCP `snyk_sca_scan` / `snyk_code_scan` | **Not authenticated** — MCP session separate from CLI token |
 
 ### Secret handling (confirmed this run)
 
@@ -56,14 +58,14 @@ Open issue paths reported: **3 unique** / **5** vulnerability instances (duplica
 
 | Severity | Title | ID | Package | Introduced by | Fix available? |
 | --- | --- | --- | --- | --- | --- |
-| HIGH | Infinite loop | `SNYK-JS-URIJS-19963963` | `uri-js@4.4.1` | `eslint` / `@eslint/eslintrc` → `ajv` → `uri-js` | Partial path suggests `eslint@10.0.0`; **`fixedIn: []`**; package already latest on npm |
-| HIGH | Uncontrolled Recursion | `SNYK-JS-BRACES-19963945` | `braces@3.0.3` | `eslint-config-next` → `fast-glob` → `micromatch` → `braces` | **No** (`isUpgradable: false`, `fixedIn: []`; already latest) |
+| HIGH | Infinite loop | `SNYK-JS-URIJS-19963963` | `uri-js@4.4.1` | `eslint` / `@eslint/eslintrc` → `ajv` → `uri-js` | Human tip suggests `eslint@10.0.0`; JSON: **`isUpgradable: false`**, **`fixedIn: []`**; package already latest on npm (`4.4.1`) |
+| HIGH | Uncontrolled Recursion | `SNYK-JS-BRACES-19963945` | `braces@3.0.3` | `eslint-config-next` → `fast-glob` → `micromatch` → `braces` | **No** (`isUpgradable: false`, `fixedIn: []`; already latest `3.0.3`) |
 | MEDIUM | Improper Encoding or Escaping of Output | `SNYK-JS-URIJS-19963961` | `uri-js@4.4.1` | same as uri-js HIGH | Same as uri-js HIGH |
 
-### Why not auto-fixed
+### Why not auto-fixed this run
 
-- Both `uri-js` and `braces` are already at the newest published versions (`4.4.1`, `3.0.3`); Snyk reports empty `fixedIn`.
-- Jumping to `eslint@10` would only drop one path, leave `@eslint/eslintrc` → `uri-js`, and risks Next.js eslint-config compatibility churn — not a safe no-redesign fix.
+- Both `uri-js` and `braces` are already at the newest published versions; Snyk JSON reports empty `fixedIn` and `isUpgradable: false`.
+- Jumping to `eslint@10` would only drop one path, leave `@eslint/eslintrc` → `uri-js`, and risks Next.js `eslint-config-next` compatibility churn — not a safe no-redesign fix under hackathon time pressure.
 - Findings are confined to **eslint tooling (devDependencies)**, not the Next.js production bundle scanned by default `snyk test`.
 
 ## Snyk Code summary (`npx snyk code test`)
@@ -77,11 +79,24 @@ Open issue paths reported: **3 unique** / **5** vulnerability instances (duplica
 
 **Remaining blocker:** enable **Snyk Code** for org `ce0d9e95-d4b8-41a4-9316-9790b9102889` in Snyk settings, then re-run `cd web && npx snyk code test`.
 
+Error text (real): `Snyk Code is not enabled (SNYK-CODE-0005)` / `403 Forbidden` / `Snyk Code is not supported for your current organization`.
+
 ## Issues fixed via Snyk this run
 
 None — production SCA was clean; `--dev` HIGH/MEDIUM issues have no publishable fixed versions / no safe drop-in upgrade.
 
 Manual security review fixes (separate from Snyk) remain documented in hardening work / `SECURITY.md` and are **not** claimed as Snyk remediations.
+
+## Demo dry-run (same session)
+
+| Step | Result |
+| --- | --- |
+| `npm ci` | OK |
+| `npm run build` | OK (Next.js 16.3.7) |
+| `npm start` on free port | OK |
+| `curl /` | **HTTP 200** |
+| `curl /?demo=1` | **HTTP 200** |
+| `npm run test:policy` | **ok** (Attack A/B/C + replay + local-demo source) |
 
 ## Remaining
 
@@ -90,6 +105,7 @@ Manual security review fixes (separate from Snyk) remain documented in hardening
 3. **DevDependency SCA** — `SNYK-JS-URIJS-19963963` (HIGH), `SNYK-JS-BRACES-19963945` (HIGH), `SNYK-JS-URIJS-19963961` (MEDIUM) — wait for upstream fixed releases or a compatible eslint/Next toolchain bump that removes the paths.
 4. **Rotate `SNYK_TOKEN`** — exposed in chat; revoke/recreate at https://app.snyk.io/account and update local gitignored env only.
 5. **Snyk MCP** — still needs MCP `snyk_auth` (CLI token does not authenticate MCP).
+6. **Merge PR** — if not already merged (see report / `gh pr view`).
 
 Re-run after Code is enabled / token rotated:
 
