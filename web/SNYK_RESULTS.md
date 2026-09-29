@@ -3,82 +3,98 @@
 **Date:** 2026-09-29  
 **Branch:** `cursor/agent-breakout-harden-c621`  
 **Scopes attempted:** `/workspace/web` (primary Next.js app), `/workspace` (root Guild agent package)  
-**Honesty note:** Results below are from real CLI/MCP attempts on this date. No vulnerability findings are fabricated.
+**Honesty note:** Results below are from real CLI runs on this date with `SNYK_TOKEN` (value never recorded here; redacted as `snyk_uat.***`). No vulnerability findings are fabricated.
 
 ## Authentication status
 
-**BLOCKED — Snyk authentication required.** Interactive OAuth opened a browser login page on the agent VM (`app.snyk.io/login`, SNYK-US-01) but could not be completed without operator credentials. Callback target is `127.0.0.1:8080` / `:18081` on the VM, so laptop-side browser login cannot finish the CLI handshake. `SNYK_TOKEN` was not set in the environment.
+**SUCCESS — CLI authenticated via `SNYK_TOKEN`.** Token was loaded from gitignored env files only (`/workspace/.env`, `/workspace/web/.env.local`). Identity: `hennyD`. Org id from SCA JSON: `ce0d9e95-d4b8-41a4-9316-9790b9102889`.
 
 | Channel | Result |
 | --- | --- |
-| `cd web && npx snyk auth` | OAuth URL shown; **authentication failed (timeout)** (`SNYK-CLI-0000`) after ~2 minutes — login page stayed on GitHub/Google provider chooser |
-| `cd web && npx snyk test` | `ERROR Authentication error (SNYK-0005)` — 401 Unauthorized |
-| `cd web && npx snyk code test` | `ERROR Authentication error (SNYK-0005)` — 401 Unauthorized |
-| `cd /workspace && npx snyk test` | `ERROR Authentication error (SNYK-0005)` — 401 Unauthorized |
-| Snyk MCP `snyk_trust` `/workspace/web` | Already trusted |
-| Snyk MCP `snyk_auth` | Timed out (`MCP error -32001`); browser OAuth also opened; not completed |
-| Snyk MCP `mcp_auth` | Failed: `Interaction query handler is not initialized` |
-| Snyk MCP `snyk_sca_scan` / `snyk_code_scan` / `snyk_secret_scan` on `/workspace/web` | `User not authenticated. Please run 'snyk_auth' first` |
+| `cd web && npx snyk test` | **OK** — 54 deps, **0** vulnerable paths |
+| `cd web && npx snyk test --dev` | **Issues found** — see SCA (devDependencies) below |
+| `cd web && npx snyk code test` | **BLOCKED** — `SNYK-CODE-0005` / 403 — Snyk Code not enabled for org |
+| `cd /workspace && npx snyk test` | **OK** — 3 deps, **0** vulnerable paths |
+| `npx snyk secrets test` | **BLOCKED** — `SNYK-CLI-0016` / 403 — Snyk Secrets not enabled for org |
+| Snyk MCP `snyk_sca_scan` / `snyk_code_scan` | **Not authenticated** — MCP session separate from CLI token (`User not authenticated. Please run 'snyk_auth' first`) |
 
-### Exact action the user must perform
+### Secret handling (confirmed this run)
 
-```bash
-# Option A — CLI (interactive browser login on a machine where you can finish OAuth)
-cd web
-npx snyk auth
-npx snyk test
-npx snyk code test
+- Token written only to gitignored files: `/workspace/.env`, `/workspace/web/.env.local` (`SNYK_TOKEN=…`, mode `600`)
+- **Not** in `NEXT_PUBLIC_*` or any committed file
+- `git check-ignore -v` matches both secret files
+- `git status` does **not** list them as staged/tracked
+- Never `git add`’d
+- **Rotate the token** — it was exposed in chat (`snyk_uat.***`)
 
-# Option B — preferred for Cloud Agents / CI (headless)
-# Create a token at https://app.snyk.io/account → Auth Token
-export SNYK_TOKEN="<your-snyk-api-token>"
-cd web
-npx snyk test
-npx snyk code test
+### Env / `.snyk` path policy
 
-# Option C — Cursor Snyk MCP
-# Invoke snyk_auth in the Snyk MCP namespace and complete the browser login
-# (must complete in the same environment so localhost callback works),
-# then re-run snyk_sca_scan / snyk_code_scan / snyk_secret_scan on /workspace/web
-```
+`.gitignore` / `web/.gitignore` cover `.env`, `.env.*`, `.env.local`, `.env.*.local`, `.env*.local` (with `!.env.example` exceptions).  
+`.snyk` and `web/.snyk` exclude `.env` / `.env.*` / `.env.local` scan paths so local secret files do not create noise. This does **not** ignore real dependency or code vulnerabilities.
 
-For this Cloud Agent environment, **Option B (`SNYK_TOKEN`)** is the reliable path. After auth succeeds, re-run scans and update this file with classified CRITICAL/HIGH/MEDIUM/LOW counts and remediations.
+## SCA summary (`npx snyk test`, production deps — primary)
 
-## Issues discovered
+| Scope | Dependencies | CRITICAL | HIGH | MEDIUM | LOW | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/workspace/web` | 54 | 0 | 0 | 0 | 0 | Clean (`ok: true`) |
+| `/workspace` | 3 | 0 | 0 | 0 | 0 | Clean (`ok: true`) |
+
+No production SCA issue titles/IDs — none reported.
+
+## SCA summary (`npx snyk test --dev`, web only — supplemental)
+
+DevDependency / lint toolchain scan (not production runtime):
+
+| Severity | Unique count | Notes |
+| --- | --- | --- |
+| CRITICAL | 0 | — |
+| HIGH | 2 | See issues below |
+| MEDIUM | 1 | See issues below |
+| LOW | 0 | — |
+
+Open issue paths reported: **3 unique** / **5** vulnerability instances (duplicate paths via eslint vs `@eslint/eslintrc`).
+
+| Severity | Title | ID | Package | Introduced by | Fix available? |
+| --- | --- | --- | --- | --- | --- |
+| HIGH | Infinite loop | `SNYK-JS-URIJS-19963963` | `uri-js@4.4.1` | `eslint` / `@eslint/eslintrc` → `ajv` → `uri-js` | Partial path suggests `eslint@10.0.0`; **`fixedIn: []`**; package already latest on npm |
+| HIGH | Uncontrolled Recursion | `SNYK-JS-BRACES-19963945` | `braces@3.0.3` | `eslint-config-next` → `fast-glob` → `micromatch` → `braces` | **No** (`isUpgradable: false`, `fixedIn: []`; already latest) |
+| MEDIUM | Improper Encoding or Escaping of Output | `SNYK-JS-URIJS-19963961` | `uri-js@4.4.1` | same as uri-js HIGH | Same as uri-js HIGH |
+
+### Why not auto-fixed
+
+- Both `uri-js` and `braces` are already at the newest published versions (`4.4.1`, `3.0.3`); Snyk reports empty `fixedIn`.
+- Jumping to `eslint@10` would only drop one path, leave `@eslint/eslintrc` → `uri-js`, and risks Next.js eslint-config compatibility churn — not a safe no-redesign fix.
+- Findings are confined to **eslint tooling (devDependencies)**, not the Next.js production bundle scanned by default `snyk test`.
+
+## Snyk Code summary (`npx snyk code test`)
 
 | Severity | Count | Notes |
 | --- | --- | --- |
-| CRITICAL | unknown | Scans did not execute (auth) |
-| HIGH | unknown | Scans did not execute (auth) |
-| MEDIUM | unknown | Scans did not execute (auth) |
-| LOW | unknown | Scans did not execute (auth) |
+| CRITICAL | n/a | Scan did not run |
+| HIGH | n/a | Scan did not run |
+| MEDIUM | n/a | Scan did not run |
+| LOW | n/a | Scan did not run |
 
-No SCA, Snyk Code, or secret-scan findings were returned because every authenticated endpoint rejected the session.
+**Remaining blocker:** enable **Snyk Code** for org `ce0d9e95-d4b8-41a4-9316-9790b9102889` in Snyk settings, then re-run `cd web && npx snyk code test`.
 
-## Issues fixed
+## Issues fixed via Snyk this run
 
-None via Snyk — no authenticated scan output was available to act on.
+None — production SCA was clean; `--dev` HIGH/MEDIUM issues have no publishable fixed versions / no safe drop-in upgrade.
 
-Manual security review fixes (separate from Snyk) are documented in the hardening work / `SECURITY.md` (path validation, headers, least-privilege Guild agent tools, truthful enforcement `source`, audit event cap). Those are **not** claimed as Snyk remediations.
-
-## Env / secret path policy
-
-Guild API credentials (if any) live **only** in gitignored files:
-
-- `/workspace/.env`
-- `/workspace/web/.env.local`
-
-Committed placeholders: `.env.example`, `web/.env.example` (no real values).
-
-Snyk policy files (`.snyk`, `web/.snyk`) **exclude** `.env` / `.env.*` / `.env.local` from scan paths so local secret files do not create noise. This does **not** ignore real dependency or code vulnerabilities — do not broaden those excludes.
+Manual security review fixes (separate from Snyk) remain documented in hardening work / `SECURITY.md` and are **not** claimed as Snyk remediations.
 
 ## Remaining
 
-All Snyk SCA / SAST / secret findings remain **unknown until auth succeeds**. Blocker: provide `SNYK_TOKEN` (or complete `npx snyk auth` / MCP `snyk_auth` in an environment where the localhost OAuth callback is reachable), then re-run:
+1. **Snyk Code** — org feature disabled (`SNYK-CODE-0005`); no SAST results until enabled.
+2. **Snyk Secrets** — org feature disabled (`SNYK-CLI-0016`); optional once enabled.
+3. **DevDependency SCA** — `SNYK-JS-URIJS-19963963` (HIGH), `SNYK-JS-BRACES-19963945` (HIGH), `SNYK-JS-URIJS-19963961` (MEDIUM) — wait for upstream fixed releases or a compatible eslint/Next toolchain bump that removes the paths.
+4. **Rotate `SNYK_TOKEN`** — exposed in chat; revoke/recreate at https://app.snyk.io/account and update local gitignored env only.
+5. **Snyk MCP** — still needs MCP `snyk_auth` (CLI token does not authenticate MCP).
+
+Re-run after Code is enabled / token rotated:
 
 ```bash
-cd web && npx snyk test && npx snyk code test
-# MCP: snyk_sca_scan, snyk_code_scan, snyk_secret_scan on /workspace/web
+# Token only via env file — do not echo
+set -a; source web/.env.local; set +a
+cd web && npx snyk test && npx snyk test --dev && npx snyk code test
 ```
-
-Update this document with real discovered / fixed / remaining classifications after that run. Do not fabricate results.
