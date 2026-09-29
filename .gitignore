@@ -5,5 +5,11 @@ dist
 guild.json
 node_modules
 tsconfig.tsbuildinfo
-
 .npmrc
+web/.next
+web/node_modules
+web/out
+*.log
+.env
+.env.*
+!.env.example

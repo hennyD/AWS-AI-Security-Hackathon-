@@ -1,58 +1,126 @@
-# AWS AI Security Hackathon
+# Agent Breakout
 
-AI Security Engineering Hackathon agent built with [Guild.ai](https://docs.guild.ai).
+**Escape the AI Office** — an interactive AI-security mini-game for the AWS AI Security Hackathon.
 
-GitHub: [hennyD/AWS-AI-Security-Hackathon-](https://github.com/hennyD/AWS-AI-Security-Hackathon-)  
-Guild agent: `hennyd~aws-ai-security-hackathon`
+## Problem
 
-## Prerequisites
+AI agents can become dangerous when untrusted instructions combine with excessive tool permissions.
 
-- Node.js 22+ and npm
-- Guild account (closed beta) and CLI: `npm i @guildai/cli -g`
-- Optional: [Snyk](https://snyk.io) MCP/plugin in Cursor for security scans
+## Solution
 
-## Setup
+Agent Breakout demonstrates attacks against AI agents and shows how policy enforcement changes the outcome for the **same attack**.
+
+## Architecture
+
+```
+User
+ ↓
+Agent (Reckless | Guarded)
+ ↓
+Tool Request
+ ↓
+Agent Security Control Plane
+ ↓
+ALLOW / BLOCK / REQUIRE APPROVAL
+ ↓
+Tool (simulated)
+```
+
+Web app lives in [`web/`](./web). Root retains the Guild.ai TypeScript agent scaffold (`agent.ts`) for future Guild integration.
+
+## Security Concepts
+
+- Prompt injection
+- Excessive agency
+- Unauthorized tool use
+- Sensitive-data leakage
+- Tool poisoning
+- Least privilege
+- Human approval gates
+- Auditability
+
+## Installation
 
 ```bash
-# Install CLI (once)
-npm i @guildai/cli -g
-
-# Authenticate and select workspace
-guild auth login
-guild auth status
-guild workspace select aws-ai-security-hackathon
-
-# Install agent dependencies
+cd web
 npm install
-
-# Optional: install coding-assistant skills + MCP config
-guild setup
 ```
 
-## Development loop
+## Running locally
 
 ```bash
-# Edit agent.ts (system prompt + tools), then:
-guild agent test          # interactive test session
-guild agent chat "hello"  # one-shot message
-
-# Save a draft version to Guild (does not publish)
-guild agent save --message "Describe your change"
+cd web
+npm run dev
 ```
 
-Do not run `guild agent save --publish` or `git push` until you intend to share a version.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Remotes
+Production:
 
-| Remote   | URL |
-| -------- | --- |
-| `origin` | GitHub — `https://github.com/hennyD/AWS-AI-Security-Hackathon-.git` |
-| `guild`  | Guild agent git — used by `guild agent pull` / `save` |
+```bash
+cd web
+npm run build
+npm start
+```
 
-## Skills
+## Demo mode
 
-This LLM agent starts with Guild skills enabled via `...skillsTools` in `agent.ts`. Remove that spread if the agent should not search or activate account-scoped skills.
+The game is **fully deterministic**. It does not call an external LLM or Guild API.
 
-## Security scanning (Snyk)
+- Reckless mode: over-permissioned agent (ALLOW on restricted paths / email).
+- Guarded mode: Agent Security Control Plane blocks or requires approval.
+- Replay button: re-runs the identical attack against the guarded agent.
 
-With the Snyk Cursor plugin authenticated, run code/SCA/secret scans against this project directory before publishing. Fix high and critical findings first.
+## Guild integration architecture
+
+| Piece | Path | Role |
+| --- | --- | --- |
+| Types | `web/src/lib/security/types.ts` | Shared request/decision contracts |
+| Policy engine | `web/src/lib/security/policy-engine.ts` | Deterministic local enforcement |
+| Guild adapter | `web/src/lib/security/guild-adapter.ts` | Demo adapter + TODO for real Guild |
+| Root Guild agent | `agent.ts` | Guild CLI TypeScript agent scaffold |
+
+`createAdapter()` stays on **DemoGuildAdapter** unless Guild mode is explicitly enabled with credentials. The UI never claims an external Guild evaluation occurred in demo mode.
+
+## Snyk scanning
+
+From `web/`:
+
+```bash
+npx snyk test
+npx snyk code test
+```
+
+From repo root (also scans Guild agent deps):
+
+```bash
+npx snyk test
+npx snyk code test
+```
+
+## Challenge walkthrough
+
+1. **Prompt Injection** — override instructions → read `CEO_SECRET.txt`
+2. **Permission Escape** — social-engineer access to restricted file
+3. **Data Exfiltration** — attempt `email.send` with restricted content
+4. **Tool Poisoning (Boss)** — poisoned tool description steers restricted read
+
+For each: run on **Reckless**, then **REPLAY AGAINST GUARDED AGENT**.
+
+## 90-second demo instructions
+
+1. Open the app — show **AGENT BREAKOUT** headline + two modes (5s).
+2. Select Level 1, hit **Submit Attack** on Reckless → breach + flag (20s).
+3. Click **REPLAY AGAINST GUARDED AGENT** → pipeline shows BLOCK (25s).
+4. Point at Security Events / audit timeline updating (15s).
+5. Jump to Level 3 or 4 — show exfil approval gate or tool poisoning (20s).
+6. Close on lesson: least privilege + control plane stops the same attack (5s).
+
+## Scripts
+
+```bash
+cd web
+npm run lint
+npm run typecheck
+npm run build
+```

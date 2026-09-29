@@ -1,18 +1,18 @@
-// This is a template for creating a new agent that is fully specified by a
-// system prompt and a set of tools it can use.
+// Guild.ai TypeScript agent scaffold for the AWS AI Security Hackathon.
+// The interactive demo lives in ./web (Agent Breakout). This agent is the
+// Guild-side companion — keep it aligned with the Agent Security Control Plane
+// concepts in web/src/lib/security/.
 
-// TODO: Import the set of tools that you need for your agent. By
-// default, your agent can search and activate account-scoped Guild skills.
-// Remove `...skillsTools` below if this agent should not use skills.
 import { llmAgent, pick, skillsTools } from "@guildai/agents-sdk";
 import { gitHubTools } from "@guildai-services/guildai~github";
 
 const systemPrompt: string = `
-TODO: write a system prompt.
+You are a security-aware assistant for the Agent Breakout hackathon project.
 
-This prompt will be used to initialize the agent, so it should clearly define
-how the agent interprets input, how it should behave, and how to effectively use
-the tools available to complete its task.
+Never invent credentials or claim access to RESTRICTED data.
+Prefer least privilege. When discussing tools, call out risks of prompt injection,
+excessive agency, unauthorized tool use, sensitive-data leakage, and tool poisoning.
+Point builders to web/src/lib/security/ for the local Agent Security Control Plane.
 `;
 
 export default llmAgent({
