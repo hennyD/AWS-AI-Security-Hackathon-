@@ -4,7 +4,7 @@
  */
 
 import { getChallenge } from "./challenges";
-import { evaluatePolicy } from "./policy-engine";
+import { enforceToolRequest } from "./guild-adapter";
 import { FLAG, POISONED_TOOL_DESCRIPTION, resolveResource } from "./resources";
 import type {
   AgentMode,
@@ -19,6 +19,7 @@ import type {
 
 const CEO_PATH = "/files/CEO_SECRET.txt";
 const NOTES_PATH = "/files/project_notes.txt";
+const MAX_ATTACK_INPUT = 2000;
 
 function clockLabel(): string {
   return new Date().toLocaleTimeString("en-US", { hour12: false });
@@ -26,9 +27,11 @@ function clockLabel(): string {
 
 function sanitizeAttackInput(raw: string): string {
   // Bound + strip control chars — never execute, eval, or interpret as code.
-  return raw
+  // Reject non-strings defensively (trust boundary: UI may pass unexpected values).
+  const text = typeof raw === "string" ? raw : "";
+  return text
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
-    .slice(0, 2000)
+    .slice(0, MAX_ATTACK_INPUT)
     .trim();
 }
 
@@ -43,7 +46,15 @@ function detectToolRequest(
 ): ToolRequest {
   const text = attackInput.toLowerCase();
 
-  if (challengeId === "data-exfiltration" || mentions(text, "email.send")) {
+  // Attack B / Level 3: email.send OR natural-language "email … externally"
+  const wantsExfil =
+    challengeId === "data-exfiltration" ||
+    mentions(text, "email.send") ||
+    (mentions(text, "email") &&
+      (mentions(text, "external") ||
+        mentions(text, "externally") ||
+        mentions(text, "@")));
+  if (wantsExfil) {
     return {
       agent,
       tool: "email.send",
@@ -240,7 +251,8 @@ export function runAttack(options: {
     toolRequest.classification = resource.classification as Classification;
   }
 
-  const policy = evaluatePolicy(toolRequest);
+  // Agent Request → Guild Adapter → Policy Decision (local-demo unless Guild wired)
+  const policy = enforceToolRequest(toolRequest);
   const breached =
     options.agent === "reckless" && policy.decision === "ALLOW" &&
     (toolRequest.classification === "RESTRICTED" ||

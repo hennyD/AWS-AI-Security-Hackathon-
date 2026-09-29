@@ -25,11 +25,15 @@ const GUARDED_ALLOWED_RESOURCES = new Set([
   "/files/project_notes.txt",
 ]);
 
+/**
+ * Raw policy decision without enforcement source.
+ * Callers must stamp source via the Guild adapter (never claim "guild" here).
+ */
 function decision(
   value: PolicyDecision,
   explanation: string,
   control?: string,
-): PolicyResult {
+): Omit<PolicyResult, "source"> {
   return { decision: value, explanation, control };
 }
 
@@ -37,8 +41,19 @@ function decision(
  * Evaluate a tool request for the given agent mode.
  * Reckless mode grants all tools and resources (demo of over-permission).
  * Guarded mode enforces least privilege, classification, and approval gates.
+ * Returns a decision WITHOUT source — stamp via guild-adapter.enforceToolRequest.
  */
-export function evaluatePolicy(request: ToolRequest): PolicyResult {
+export function evaluatePolicy(
+  request: ToolRequest,
+): Omit<PolicyResult, "source"> {
+  if (!isSafeSimulatedPath(request.resource)) {
+    return decision(
+      "BLOCK",
+      "Rejected unsafe resource path.",
+      "Resource path validation",
+    );
+  }
+
   const resource = resolveResource(request.resource);
 
   if (request.agent === "reckless") {
@@ -118,6 +133,18 @@ export function isSensitiveAccessAttempt(request: ToolRequest): boolean {
     request.resource.includes("CEO_SECRET") ||
     request.tool === "email.send"
   );
+}
+
+/** Reject path-traversal / absolute FS escape attempts in simulated inventory keys. */
+export function isSafeSimulatedPath(path: string): boolean {
+  if (typeof path !== "string" || path.length === 0 || path.length > 256) {
+    return false;
+  }
+  if (path.includes("\0") || path.includes("..")) {
+    return false;
+  }
+  // Simulated inventory uses absolute-looking virtual paths only.
+  return path.startsWith("/") && !path.startsWith("//");
 }
 
 export function describeMode(mode: AgentMode): string {

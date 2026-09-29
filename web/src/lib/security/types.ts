@@ -25,10 +25,15 @@ export interface ToolRequest {
   reason: string;
 }
 
+/** Where the decision was produced. Never label local-demo as Guild. */
+export type EnforcementSource = "guild" | "local-demo";
+
 export interface PolicyResult {
   decision: PolicyDecision;
   explanation: string;
   control?: string;
+  /** Truthful enforcement origin — required on every decision. */
+  source: EnforcementSource;
 }
 
 export interface SimulatedResource {

@@ -68,19 +68,23 @@ npm start
 The game is **fully deterministic**. It does not call an external LLM or Guild API.
 
 - Reckless mode: over-permissioned agent (ALLOW on restricted paths / email).
-- Guarded mode: Agent Security Control Plane blocks or requires approval.
+- Guarded mode: Agent Security Control Plane blocks or requires approval (**local-demo** policy — SIMULATED).
 - Replay button: re-runs the identical attack against the guarded agent.
+- Judges: open `/?demo=1` for a highlighted walkthrough of the primary flow.
+- UI label: `Security Control Plane / Local Demo Policy` (never claims Guild unless a real Guild evaluation occurs).
 
 ## Guild integration architecture
 
 | Piece | Path | Role |
 | --- | --- | --- |
-| Types | `web/src/lib/security/types.ts` | Shared request/decision contracts |
-| Policy engine | `web/src/lib/security/policy-engine.ts` | Deterministic local enforcement |
-| Guild adapter | `web/src/lib/security/guild-adapter.ts` | Demo adapter + TODO for real Guild |
-| Root Guild agent | `agent.ts` | Guild CLI TypeScript agent scaffold |
+| Types | `web/src/lib/security/types.ts` | Shared request/decision contracts + `source` |
+| Policy engine | `web/src/lib/security/policy-engine.ts` | Deterministic **local-demo** enforcement |
+| Guild adapter | `web/src/lib/security/guild-adapter.ts` | Adapter boundary; Demo default; Remote throws |
+| Root Guild agent | `agent.ts` | Guild CLI TypeScript agent scaffold (separate from web) |
 
-`createAdapter()` stays on **DemoGuildAdapter** unless Guild mode is explicitly enabled with credentials. The UI never claims an external Guild evaluation occurred in demo mode.
+**Status:** Real Guild policy evaluation is **not integrated**. `@guildai/agents-sdk` provides `llmAgent`/tools only — no policy-eval API. Credentials (`GUILD_API_TOKEN` / `GUILD_API_KEY`) and a documented security API are still required. Deterministic local policy remains the fallback and the only enforcement used in the demo.
+
+Flow: `Agent Request → Guild Adapter → Policy Decision → ALLOW/BLOCK/REQUIRE_APPROVAL → Tool (simulated)`
 
 ## Snyk scanning
 

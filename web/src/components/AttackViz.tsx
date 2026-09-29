@@ -162,8 +162,10 @@ export function LearningMoment({ outcome }: { outcome: AttackOutcome }) {
         </div>
       </dl>
       <p className="mt-3 text-[10px] uppercase tracking-widest text-[var(--muted)]">
-        Mode: {outcome.agent === "reckless" ? "Reckless Agent" : "Guarded Agent"} · Demo
-        enforcement (no external Guild call)
+        Mode: {outcome.agent === "reckless" ? "Reckless Agent" : "Guarded Agent"} ·{" "}
+        {outcome.policy.source === "guild"
+          ? "Security Control Plane / Guild Enforcement"
+          : "Security Control Plane / Local Demo Policy"}
       </p>
     </div>
   );

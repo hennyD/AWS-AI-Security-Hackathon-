@@ -33,7 +33,7 @@ export function SecurityDashboard({
         <span className="terminal text-sm text-[var(--warn)]">SCORE {score}</span>
       </div>
       <p className="mt-1 text-[10px] uppercase tracking-widest text-[var(--muted)]">
-        Agent Security Control Plane · live audit
+        Security Control Plane / Local Demo Policy · live audit
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-2">

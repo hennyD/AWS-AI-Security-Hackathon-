@@ -11,6 +11,7 @@ import { SecurityDashboard } from "@/components/SecurityDashboard";
 import {
   CHALLENGES,
   POISONED_TOOL_DESCRIPTION,
+  enforcementPlaneLabel,
   runAttack,
   type AgentMode,
   type AttackOutcome,
@@ -18,7 +19,9 @@ import {
   type SecurityEvent,
 } from "@/lib/security";
 
-export function GameShell() {
+const MAX_AUDIT_EVENTS = 100;
+
+export function GameShell({ demoMode = false }: { demoMode?: boolean }) {
   const [mode, setMode] = useState<AgentMode>("reckless");
   const [activeId, setActiveId] = useState<ChallengeId>("prompt-injection");
   const [inputs, setInputs] = useState<Record<ChallengeId, string>>(() =>
@@ -45,12 +48,15 @@ export function GameShell() {
   );
 
   const progress = CHALLENGES.filter((c) => completed[c.id]).length;
+  const planeLabel = enforcementPlaneLabel(
+    outcome?.policy.source ?? "local-demo",
+  );
 
   function execute(agent: AgentMode, challengeId: ChallengeId, attackInput: string) {
     const result = runAttack({ challengeId, agent, attackInput });
     setMode(agent);
     setOutcome(result);
-    setEvents((prev) => [...prev, result.event]);
+    setEvents((prev) => [...prev, result.event].slice(-MAX_AUDIT_EVENTS));
     setScore((s) => s + result.scoreDelta);
     if (result.breached || result.policy.decision !== "ALLOW") {
       // Mark progress when player successfully demonstrates breach or block path
@@ -58,6 +64,7 @@ export function GameShell() {
         setCompleted((prev) => ({ ...prev, [challengeId]: true }));
       }
     }
+    return result;
   }
 
   function onSubmit() {
@@ -81,6 +88,15 @@ export function GameShell() {
     outcome?.policy.decision === "BLOCK" ||
     outcome?.policy.decision === "REQUIRE_APPROVAL";
 
+  const demoSteps = [
+    "1. Challenge",
+    "2. Reckless attack",
+    "3. Breach",
+    "4. Replay",
+    "5. Guarded block",
+    "6. Explanation",
+  ];
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-6">
@@ -103,9 +119,43 @@ export function GameShell() {
             Demo mode · deterministic · no external LLM
           </span>
           <span className="rounded-full border border-[var(--line)] px-3 py-1">
-            Control plane: local policy engine
+            {planeLabel}
           </span>
         </div>
+        {demoMode ? (
+          <div className="mt-4 rounded-xl border border-[var(--accent)]/40 bg-[rgba(51,224,255,0.06)] p-3">
+            <p className="text-[10px] uppercase tracking-widest text-[var(--accent)]">
+              Judge demo flow (?demo=1)
+            </p>
+            <ol className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+              {demoSteps.map((label, idx) => {
+                const activeStep =
+                  (idx === 0 && !outcome) ||
+                  (idx === 1 && mode === "reckless" && !outcome) ||
+                  (idx === 2 && Boolean(outcome?.breached)) ||
+                  (idx === 3 && Boolean(outcome?.breached) && mode === "reckless") ||
+                  (idx === 4 && Boolean(blocked)) ||
+                  (idx === 5 && Boolean(blocked) && Boolean(outcome));
+                return (
+                  <li
+                    key={label}
+                    className={`rounded border px-2 py-1 ${
+                      activeStep
+                        ? "border-[var(--accent)] text-[var(--text)]"
+                        : "border-[var(--line)]"
+                    }`}
+                  >
+                    {label}
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="mt-2 text-xs text-[var(--text)]">
+              Select Level 1 → Submit Attack (Reckless) → REPLAY AGAINST GUARDED AGENT →
+              read the Learning Moment.
+            </p>
+          </div>
+        ) : null}
       </header>
 
       <section className="mb-6">
