@@ -1,0 +1,15 @@
+# Snyk (https://snyk.io) policy file — web app scope
+# Excludes local env/secret files only. Do not suppress real vulns here.
+version: v1.25.1
+
+exclude:
+  global:
+    - .env
+    - .env.*
+    - .env.local
+    - .env.*.local
+  code:
+    - .env
+    - .env.*
+    - .env.local
+    - .env.*.local

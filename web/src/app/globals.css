@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #05080f;
+  --bg-panel: #0b1220;
+  --bg-card: #0f1a2e;
+  --line: #1e3358;
+  --text: #d7e6ff;
+  --muted: #7f97b8;
+  --accent: #33e0ff;
+  --accent-2: #7c5cff;
+  --danger: #ff3b6b;
+  --danger-glow: rgba(255, 59, 107, 0.35);
+  --ok: #2dff9a;
+  --ok-glow: rgba(45, 255, 154, 0.28);
+  --warn: #ffc857;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: var(--font-space);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(124, 92, 255, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(51, 224, 255, 0.12), transparent 50%),
+    linear-gradient(180deg, #060a14 0%, #05080f 40%, #04070d 100%);
+  font-family: var(--font-space), ui-sans-serif, system-ui, sans-serif;
+}
+
+.terminal {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.panel {
+  background: linear-gradient(180deg, rgba(15, 26, 46, 0.95), rgba(11, 18, 32, 0.92));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(51, 224, 255, 0.04), 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.glow-danger {
+  box-shadow: 0 0 0 1px rgba(255, 59, 107, 0.45), 0 0 28px var(--danger-glow);
+}
+
+.glow-ok {
+  box-shadow: 0 0 0 1px rgba(45, 255, 154, 0.4), 0 0 28px var(--ok-glow);
+}
+
+.pipeline-arrow {
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+@keyframes pulse-border {
+  0%,
+  100% {
+    border-color: rgba(255, 59, 107, 0.45);
+  }
+  50% {
+    border-color: rgba(255, 59, 107, 0.9);
+  }
+}
+
+.breach-pulse {
+  animation: pulse-border 1.4s ease-in-out infinite;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: slide-in 0.35s ease-out both;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #243553;
+  border-radius: 999px;
+}

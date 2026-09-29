@@ -1,0 +1,25 @@
+.DS_Store
+.git-credentials
+agent.js.gz
+dist
+guild.json
+node_modules
+tsconfig.tsbuildinfo
+.npmrc
+web/.next
+web/node_modules
+web/out
+*.log
+
+# Secrets / local env — NEVER commit
+.env
+.env.*
+.env.local
+.env.*.local
+.env*.local
+!.env.example
+!**/.env.example
+
+# Snyk local cache / auth artifacts (policy file .snyk IS committed)
+.snyk.d/
+.dccache
