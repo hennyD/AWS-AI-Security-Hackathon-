@@ -51,6 +51,17 @@ None via Snyk — no authenticated scan output was available to act on.
 
 Manual security review fixes (separate from Snyk) are documented in the hardening commit / SECURITY.md (path validation, headers, least-privilege Guild agent tools, truthful enforcement `source`, audit event cap).
 
+## Env / secret path policy
+
+Guild API credentials (if any) live **only** in gitignored files:
+
+- `/workspace/.env`
+- `/workspace/web/.env.local`
+
+Committed placeholders: `.env.example`, `web/.env.example` (no real values).
+
+Snyk policy files (`.snyk`, `web/.snyk`) **exclude** `.env` / `.env.*` / `.env.local` from scan paths so local secret files do not create noise. This does **not** ignore real dependency or code vulnerabilities — do not broaden those excludes.
+
 ## Remaining
 
 All Snyk SCA/SAST/secret findings remain **unknown until auth succeeds**. Re-run the commands above after `snyk auth` or `SNYK_TOKEN`, then update this file with classified CRITICAL/HIGH/MEDIUM/LOW results and remediations.

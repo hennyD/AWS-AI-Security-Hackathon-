@@ -1,0 +1,22 @@
+# Snyk (https://snyk.io) policy file
+# https://docs.snyk.io/manage-risk/policies/the-snyk-cli-policy-file-.snyk
+#
+# Purpose: exclude local secret files from scan paths so .env* false-positives
+# do not clutter results. Do NOT ignore real dependency or code vulnerabilities.
+version: v1.25.1
+
+exclude:
+  global:
+    - .env
+    - .env.*
+    - '**/.env'
+    - '**/.env.*'
+    - '**/.env.local'
+    - '**/.env.*.local'
+  code:
+    - .env
+    - .env.*
+    - '**/.env'
+    - '**/.env.*'
+    - '**/.env.local'
+    - '**/.env.*.local'

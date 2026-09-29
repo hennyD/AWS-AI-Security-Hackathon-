@@ -62,8 +62,21 @@ Treat it as an educational control plane, not a production server-side gate.
 - `DemoGuildAdapter` — local enforcement (default), stamps `source: "local-demo"`
 - `GuildRemoteAdapter` — throws until a real Guild policy API + credentials exist
 - `createAdapter()` / `enforceToolRequest()` — demo path; never claims Guild without a real call
+- `readGuildApiToken()` / `hasGuildCredentials()` — read optional env creds without claiming Guild enforcement
 
-**Missing for real Guild integration:** Guild policy-evaluation SDK/API, `GUILD_API_TOKEN`/`GUILD_API_KEY`, Guild CLI, and docs for mapping decisions onto `PolicyResult`.
+**Secrets live only in gitignored env files** (never commit, never `NEXT_PUBLIC_*`):
+
+| File | Purpose |
+| --- | --- |
+| `web/.env.local` | Next.js server-side env (gitignored) |
+| `/workspace/.env` | Root tooling / future Guild CLI (gitignored) |
+| `web/.env.example` / `.env.example` | Placeholders only (committed) |
+
+Variable names: `GUILD_API_TOKEN`, `GUILD_API_KEY`, `GUILD_ENTITY_ID`, `GUILD_WORKSPACE_ID`, `GUILD_SECURITY_MODE`.
+
+Presence of a token does **not** switch `source` to `"guild"`. Credentials are stored for future Guild CLI / API calls once a real policy-eval SDK exists. Guild CLI was not available in this environment (`guild: command not found`).
+
+**Missing for real Guild integration:** Guild policy-evaluation SDK/API, Guild CLI, and docs for mapping decisions onto `PolicyResult`.
 
 ## Snyk scanning instructions
 
